@@ -1,9 +1,9 @@
 # [코드 추가] get_object_or_404 불러오기
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 # [코드 추가] models.py의 Comment 모델 불러오기
 from .models import Posting
 # [코드 작성] forms.py의 PostingForm, CommentForm 불러오기
-
+from .forms import PostingForm
 
 # Create your views here.
 def index(request):
@@ -21,24 +21,21 @@ def posting_list(request):
 def posting_create(request):
     if request.method == 'POST':
         # [코드 수정] posting_form에 POST 방식으로 넘어온 PostingForm 저장
-        posting_title = request.POST.get('title')
-        posting_content = request.POST.get('content')
+        posting_form = PostingForm(request.POST)
         
         # [코드 수정] posting_form이 유효한지 확인하고 저장
-        Posting.objects.create(
-            title=posting_title,
-            content=posting_content,
-        )
-        return redirect('page:posting_list')
+        if posting_form.is_valid():
+            posting_form.save()
+            return redirect('page:posting_list')     
     else:
         # [코드 수정] PostingForm을 생성하여 posting_form에 저장
         # [코드 수정] None을 지우고 작성
-        None
+        posting_form = PostingForm()
     
     context = {
         'posting_type': '글쓰기',
         # [코드 추가] posting_form을 딕셔너리 형식으로 html에 넘겨주기
-
+        'posting_form': posting_form,
     }
     # [코드 수정] 'page/posting_form.html'페이지 렌더링 (context도 같이 전달)
     return render(request, 'page/posting_create.html')
@@ -46,7 +43,7 @@ def posting_create(request):
 # [Read & Create] 작성글 보기 & 댓글 작성
 def posting_detail(request, posting_id):
     # [코드 수정] get_object_or_404를 이용하여 존재하지 않는 객체를 불러오려고 하면 에러 페이지를 호출하도록 함
-    posting = Posting.objects.get(id=posting_id)
+    posting = get_object_or_404(Posting, id = posting_id)
 
     # [코드 작성] request.method가 'POST'일 경우 comment_form에 요청값 저장
     # [코드 작성] comment_form이 유효하면 commit=False를 이용하여 comment에 form 임시저장
@@ -72,28 +69,26 @@ def posting_detail(request, posting_id):
 # [Update] 작성글 수정
 def posting_update(request, posting_id):
     # [코드 수정] get_object_or_404를 이용하여 존재하지 않는 객체를 불러오려고 하면 에러 페이지를 호출하도록 함
-    posting = Posting.objects.get(id=posting_id)
+    posting = get_object_or_404(Posting, id = posting_id)
 
     if request.method == 'POST':
         # [코드 수정] POST 방식으로 넘어온 PostingForm에 posting instance를 담아서 저장
-        posting_title = request.POST.get('title')
-        posting_content = request.POST.get('content')
-        posting.title = posting_title
-        posting.content = posting_content
+        posting_form = PostingForm(request.POST, instance = posting)
 
         # [코드 수정] posting_form이 유효한지 확인하고 저장
-        posting.save()
-        return redirect('page:posting_detail', posting_id)
+        if posting_form.is_valid():
+            posting_form.save()
+            return redirect('page:posting_detail', posting_id)
     else:
         # [코드 수정] PostingForm을 생성하여 posting_form에 저장
         # [코드 수정] None을 지우고 작성
-        None
+        posting_form = PostingForm()
     
     context = {
         'posting_type': '글수정',
         'posting': posting,
         # [코드 추가] posting_form을 딕셔너리 형식으로 html에 넘겨주기
-        
+        'posting_form' : posting_form,
     }
     # [코드 수정] 'page/posting_form.html'페이지 렌더링 (context도 같이 전달)
     return render(request, 'page/posting_update.html', context)
@@ -102,7 +97,7 @@ def posting_update(request, posting_id):
 def posting_delete(request, posting_id):
     if request.method == 'POST':
         # [코드 수정] get_object_or_404를 이용하여 존재하지 않는 객체를 불러오려고 하면 에러 페이지를 호출하도록 함
-        posting = Posting.objects.get(id=posting_id)
+        posting = get_object_or_404(Posting, id = posting_id)
         posting.delete()
         return redirect('page:posting_list')
     return redirect('page:posting_detail', posting_id)
